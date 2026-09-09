@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     embedding_batch_size: int = 32
 
     # --- Reranker Model (ONNX, CPU) ---
-    reranker_model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    reranker_model_name: str = "Xenova/ms-marco-MiniLM-L-6-v2"
 
     # --- LLM Server (llama.cpp) ---
     llm_base_url: str = "http://localhost:8080"
