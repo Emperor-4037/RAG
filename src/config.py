@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     celery_result_backend: str = "redis://localhost:6379/2"
 
     # --- Embedding Model (ONNX, CPU) ---
-    embedding_model_name: str = "BAAI/bge-base-en-v1.5"
+    embedding_model_name: str = "Xenova/bge-base-en-v1.5"
     embedding_dimension: int = 768
     embedding_batch_size: int = 32
 
