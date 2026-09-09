@@ -1,0 +1,100 @@
+version: "3.9"
+
+services:
+  # ---------------------------------------------------------------------------
+  # Vector Database — Qdrant
+  # Uses memory-mapped storage to keep RAM footprint low on 16-32GB systems.
+  # ---------------------------------------------------------------------------
+  qdrant:
+    image: qdrant/qdrant:v1.12.5
+    container_name: rag-qdrant
+    ports:
+      - "${QDRANT_HTTP_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__STORAGE__ON_DISK_PAYLOAD: "true"
+      QDRANT__STORAGE__MMAP_THRESHOLD_KB: "256"
+      QDRANT__SERVICE__ENABLE_TLS: "false"
+    mem_limit: 512m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6333/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Redis Stack — Semantic Cache + Celery Broker
+  # Redis Stack bundles RediSearch (required by RedisVL for vector similarity).
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis/redis-stack:7.4.0-v2
+    container_name: rag-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_INSIGHT_PORT:-8001}:8001"
+    volumes:
+      - redis_data:/data
+    environment:
+      REDIS_ARGS: "--maxmemory 256mb --maxmemory-policy allkeys-lru --save 60 1000"
+    mem_limit: 384m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Prometheus — Metrics Collection
+  # Scrapes the FastAPI app and Qdrant's built-in metrics endpoint.
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: rag-prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+      - "--storage.tsdb.retention.size=1GB"
+    mem_limit: 256m
+    restart: unless-stopped
+    depends_on:
+      - qdrant
+
+  # ---------------------------------------------------------------------------
+  # Grafana — Dashboards & Visualization
+  # Auto-provisions Prometheus as a datasource on first boot.
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: rag-grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    mem_limit: 256m
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+volumes:
+  qdrant_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local

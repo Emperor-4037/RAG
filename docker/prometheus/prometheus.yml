@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # FastAPI application metrics (exposed via prometheus_client)
+  - job_name: "rag-api"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:8000"]
+        labels:
+          service: "rag-api"
+
+  # Qdrant built-in metrics
+  - job_name: "qdrant"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["qdrant:6333"]
+        labels:
+          service: "qdrant"
+
+  # Redis exporter (optional — add redis-exporter service if needed)
+  # - job_name: "redis"
+  #   static_configs:
+  #     - targets: ["redis-exporter:9121"]

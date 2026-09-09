@@ -1,0 +1,102 @@
+[project]
+name = "project-rag"
+version = "0.1.0"
+description = "Production RAG pipeline optimized for local LLM inference on 8GB VRAM GPU"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Emperor-4037", email = "vasudeva4037@gmail.com" },
+]
+
+dependencies = [
+    # --- API Framework ---
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.34.0",
+    "python-multipart==0.0.20",       # File upload support
+
+    # --- Async Worker ---
+    "celery[redis]==5.4.0",
+    "redis==5.2.1",
+
+    # --- ML / Inference (CPU only) ---
+    "onnxruntime==1.20.1",
+    "tokenizers==0.21.0",             # HuggingFace tokenizer for ONNX models
+    "tiktoken==0.8.0",                # Token counting for chunking
+
+    # --- Document Parsing ---
+    "pymupdf4llm==0.0.17",
+    "python-docx==1.1.2",
+    "python-pptx==1.0.2",
+
+    # --- Vector Database ---
+    "qdrant-client==1.12.1",
+
+    # --- Semantic Cache ---
+    "redisvl==0.4.1",
+
+    # --- Observability ---
+    "opentelemetry-api==1.29.0",
+    "opentelemetry-sdk==1.29.0",
+    "opentelemetry-exporter-prometheus==0.50b0",
+    "opentelemetry-instrumentation-fastapi==0.50b0",
+    "prometheus-client==0.21.1",
+    "structlog==24.4.0",
+
+    # --- Rate Limiting ---
+    "slowapi==0.1.9",
+
+    # --- Configuration ---
+    "pydantic-settings==2.7.1",
+
+    # --- HTTP Client (for llama.cpp SSE) ---
+    "httpx==0.28.1",
+    "httpx-sse==0.4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "pytest-asyncio==0.25.0",
+    "pytest-cov==6.0.0",
+    "httpx==0.28.1",                  # TestClient transport
+    "ruff==0.8.6",
+    "mypy==1.14.1",
+]
+
+[build-system]
+requires = ["setuptools>=75.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+# --- Ruff (Linter + Formatter) ---
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]  # Line length handled by formatter
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+# --- Pytest ---
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "integration: marks tests requiring running infrastructure (deselect with '-m \"not integration\"')",
+]
+
+# --- MyPy ---
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
